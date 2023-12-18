@@ -13,13 +13,18 @@ class Board:
         # set all valid moves for each piece on the board
         for rank in (self.board[0], self.board[1], self.board[6], self.board[7]):
             for piece in rank:
+                print(f"PIECE: {piece.getIcon()}")
                 piece.setValidMoves(self.board)
-    
+        
+        # get set all of all valid moves for each color
+        self.black_moves, self.white_moves = self.getAllValidMoves()
+        self.black_checked, self.white_checked = False, False
+
     # init pieces for a given color
     def initColor(self, color):
 
         # get the rank based off color
-        rank = 7 if color == 'white' else 0
+        rank = 0 if color == 'white' else 7
 
         # set the pieces on the back rank
         self.board[rank][0] = Rook(0, rank, color)
@@ -32,7 +37,7 @@ class Board:
         self.board[rank][7] = Rook(7, rank, color)
 
         # get pawns rank
-        rank = 6 if rank == 7 else 1
+        rank = 1 if rank == 0 else 6
 
         # set the pawns 
         for i in range(0,8): self.board[rank][i] = Pawn(i, rank, color)
@@ -44,14 +49,38 @@ class Board:
         print("BOARD:\n_________________________________________________")
 
         # rows in board
-        for row in self.board:
-            print("|     |     |     |     |     |     |     |     |")
+        for idx, row in enumerate(reversed(self.board)):
+            print(f"|{8 - idx}    |     |     |     |     |     |     |     |")
             print("|", end="")
             for square in row:
                 if square:
                     print(f"  {square.getIcon()}  |", end="")
                 else: print("     |", end="")
-            print("\n|_____|_____|_____|_____|_____|_____|_____|_____|")
+            if idx == 7:
+                print("\n|____A|____B|____C|____D|____E|____F|____G|____H|")
+            else:
+                print("\n|_____|_____|_____|_____|_____|_____|_____|_____|")
+
+    def getAllValidMoves(self):
+
+        black_valid_moves = set()
+        white_valid_moves = set()
+
+        # cycle through all squares on board
+        for row in self.board:
+            for piece in row:
+
+                # if the current square on the board has a piece, add its valid moves to the list
+                # of valid moves for the respective team
+                if piece:
+
+                    # iterate through each move to add it to the correct colors set of valid moves
+                    for move in piece.getValidMoves():
+                        
+                        if piece.getColor() == 'black': black_valid_moves.add(move)
+                        else: white_valid_moves.add(move)
+    
+        return (black_valid_moves, white_valid_moves)
 
     def notationToPos(self, notation):
 
@@ -78,92 +107,6 @@ class Board:
         elif notation[1] == '8': pos_x = 7
 
         return (pos_x, pos_y)
-    
-    def possibleMoves(self, pos_x, pos_y):
-
-        color = self.board[pos_y][pos_x].getColor()
-
-        # possible valid squares in row and col
-        col = []
-        x, y = pos_x, pos_y + 1
-        while y < 8:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            col.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            y += 1
-        
-        y = pos_y - 1
-        while y >= 0:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            col.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            y -= 1
-        
-        row = []
-        x, y = pos_x + 1, pos_y
-        while x < 8:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            row.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            x += 1
-        
-        x = pos_x - 1
-        while x >= 0:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            row.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            x -= 1
-
-        # squares to left and up in the left-to-right diagonal
-        ltr_diagonal = []
-        x, y = pos_x-1, pos_y-1
-        while x >= 0 and y >= 0:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            ltr_diagonal.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            x -= 1
-            y -= 1
-
-        # squares to right and down in left to right diagonal
-        x, y = pos_x+1, pos_y+1
-        while x < 8 and y < 8:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            ltr_diagonal.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            x += 1
-            y += 1
-        
-        # squares to right and up in right to left diagonal
-        rtl_diagonal = []
-        x, y = pos_x-1, pos_y+1
-        while x >= 0 and y < 8:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            rtl_diagonal.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            x -= 1
-            y += 1
-
-        # squares to left and down in right to left diagonal
-        x, y = pos_x+1, pos_y-1
-        while x < 8 and y >= 0:
-            if self.board[y][x] and self.board[y][x].getColor() == color: break
-            rtl_diagonal.append((x, y))
-            if self.board[y][x] and self.board[y][x].getColor() != color: break
-            x += 1
-            y -= 1
-        
-        # squares in knight moves
-        knight_dirs = [(-1,2),(1,2),(2,1),(2,-1),(-2,1),(-2,-1),(-1,-2),(1,-2)]
-        knight_moves = []
-        for x, y in knight_dirs:
-            x += pos_x
-            y += pos_y
-            if 0 <= x < 8 and 0 <= y < 8:
-                if self.board[y][x] and self.board[y][x].getColor() == color: break
-                knight_moves.append((x, y))
-        
-        # tuple with found moves
-        return (col, row, ltr_diagonal, rtl_diagonal, knight_moves)
 
 chess = Board()
 chess.printBoard()
@@ -171,3 +114,6 @@ for idx_row, row in enumerate(chess.board):
     for idx_col, piece in enumerate(row):
         if piece:
             print(f"POSSIBLE MOVES FOR {piece.getIcon()} AT ({idx_col},{idx_row}): {piece.getValidMoves()}")
+
+black_moves, white_moves = chess.getAllValidMoves()
+print(f"- BLACK VALID MOVES: {black_moves}\n- WHITE VALID MOVES: {white_moves}")
