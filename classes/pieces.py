@@ -8,6 +8,7 @@ class Piece:
         self.valid_moves = []
         self.pos_x = pos_x
         self.pos_y = pos_y
+        self.current_turn = 'white'
     
     def getColor(self):
         return self.color
@@ -178,7 +179,6 @@ class Pawn(Piece):
 
                 dx, dy = direction
                 new_x, new_y = self.pos_x + dx, self.pos_y + dy
-                print(f"===================================\n- idx: {idx}\n- coords: ({new_x},{new_y})\n- original: ({self.pos_x},{self.pos_y})\n- direction: {direction}\n===================================")
 
                 if 0 <= new_x < 8 and 0 <= new_y < 8:
 
@@ -190,17 +190,14 @@ class Pawn(Piece):
                     # and prev_pos), 2 square jump is valid move
 
                     if idx == 0 and self.initial_jump and (not board_pos and not prev_pos):
-                        print(f"({new_x},{new_y}): APPENDING PAWN JUMPS 2!")
                         self.valid_moves.append( (new_x, new_y) )
 
                     # if idx 1 or 3 (pawn takes), and the board has a piece that 
                     # is not the color of the pawn, pawn takes is a valid move. 
                     elif (idx == 1 or idx == 3) and (board_pos and board_pos.getColor() != self.color): 
-                        print(f"({new_x},{new_y}): APPENDING PAWN TAKES!")
                         self.valid_moves.append( (new_x, new_y) )
                     
                     # if idx 2 (pawn takes step forward) and the spot in front of
                     # the pawn is not blocked, step forward is valid move
                     elif idx == 2 and not board_pos:
-                        print(f"({new_x},{new_y}): APPENDING PAWN TAKES STEP!")
                         self.valid_moves.append( (new_x, new_y) )

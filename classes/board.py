@@ -13,8 +13,8 @@ class Board:
         # set all valid moves for each piece on the board
         for rank in (self.board[0], self.board[1], self.board[6], self.board[7]):
             for piece in rank:
-                print(f"PIECE: {piece.getIcon()}")
-                piece.setValidMoves(self.board)
+                if piece:
+                    piece.setValidMoves(self.board)
         
         # get set all of all valid moves for each color
         self.black_moves, self.white_moves = self.getAllValidMoves()
@@ -31,7 +31,8 @@ class Board:
         self.board[rank][1] = Knight(1, rank, color)
         self.board[rank][2] = Bishop(2, rank, color)
         self.board[rank][3] = Queen(3, rank, color)
-        self.board[rank][4] = King(4, rank, color)
+        if color == 'white': self.board[rank][4] = Queen(4, rank, color)
+        else: self.board[rank][4] = King(4, rank, color)
         self.board[rank][5] = Bishop(5, rank, color)
         self.board[rank][6] = Knight(6, rank, color)
         self.board[rank][7] = Rook(7, rank, color)
@@ -82,6 +83,31 @@ class Board:
     
         return (black_valid_moves, white_valid_moves)
 
+    # given a board and a color to check for, return whether or not that color is in check.
+    def isCheck(self, board, color):
+
+        king_x, king_y = -1, -1
+        opposite_color_moves = set()
+
+        for idx_y, row in enumerate(board):
+            for idx_x, piece in enumerate(row):
+
+                # if piece is in square
+                if piece:
+                    
+                    # if piece is colors king, mark the coordinates
+                    if piece.getColor() == color and (piece.getIcon() == '♔' or piece.getIcon() == '♚'):
+                        king_x, king_y = idx_x, idx_y
+
+                    # if piece is of opposite color, add all of its moves to the set of all moves
+                    # for the opposite team.
+                    elif piece.getColor() != color:
+                        for move in piece.getValidMoves():
+                            opposite_color_moves.add(move)
+                if (king_x, king_y) in opposite_color_moves: return True
+
+        return False
+
     def notationToPos(self, notation):
 
         pos_x, pos_y = -1, -1
@@ -112,8 +138,10 @@ chess = Board()
 chess.printBoard()
 for idx_row, row in enumerate(chess.board):
     for idx_col, piece in enumerate(row):
-        if piece:
-            print(f"POSSIBLE MOVES FOR {piece.getIcon()} AT ({idx_col},{idx_row}): {piece.getValidMoves()}")
+        pass
+        # if piece:
+            # print(f"- POSSIBLE MOVES FOR {piece.getIcon()} AT ({idx_col},{idx_row}): {piece.getValidMoves()}")
 
-black_moves, white_moves = chess.getAllValidMoves()
-print(f"- BLACK VALID MOVES: {black_moves}\n- WHITE VALID MOVES: {white_moves}")
+# black_moves, white_moves = chess.getAllValidMoves()
+#print(f"- BLACK VALID MOVES: {black_moves}\n- WHITE VALID MOVES: {white_moves}")
+print(f"- BLACK IS IN CHECK: {chess.isCheck(chess.board, 'black')}")
