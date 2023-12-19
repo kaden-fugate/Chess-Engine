@@ -1,4 +1,5 @@
 from pieces import King, Queen, Rook, Bishop, Knight, Pawn
+from errors import invalidMoveError
 
 class Board:
 
@@ -19,6 +20,7 @@ class Board:
         # get set all of all valid moves for each color
         self.black_moves, self.white_moves = self.getAllValidMoves()
         self.black_checked, self.white_checked = False, False
+        self.current_turn = 'white'
 
     # init pieces for a given color
     def initColor(self, color):
@@ -104,9 +106,39 @@ class Board:
                     elif piece.getColor() != color:
                         for move in piece.getValidMoves():
                             opposite_color_moves.add(move)
+
                 if (king_x, king_y) in opposite_color_moves: return True
 
         return False
+
+    def movePiece(self, start_pos, end_pos):
+
+        # get x and y coords for start and end positions
+        start_x, start_y = start_pos
+        end_x, end_y = end_pos
+
+        # get positions on board
+        start = self.board[start_y][start_x]
+
+        # if start position on board doesnt have piece, no piece to move therefore we should raise
+        # an invalid move error.
+        if not start: 
+            raise invalidMoveError(f"Invalid Move Error: No Piece at Position {start_pos}")
+
+        # if piece at start position is not the color is not that of the current turns color, 
+        # current move is invalid.
+        elif start.getColor() != self.current_turn: 
+            raise invalidMoveError(f"Invalid Move Error: Piece at Position {start_pos} is not {self.current_turn}")
+
+        # if end position for piece is not 
+        elif end_pos not in start.getValidMoves(): 
+            raise invalidMoveError(f"Invalid Move Error: Piece at {start_pos} can't Move to {end_pos}")
+        
+        # move the piece
+        self.board[end_y][end_x] = start
+        self.board[start_y][start_x] = None
+
+    def isAttemptingToCastle(self, start_pos, end_pos):
 
     def notationToPos(self, notation):
 
@@ -145,3 +177,5 @@ for idx_row, row in enumerate(chess.board):
 # black_moves, white_moves = chess.getAllValidMoves()
 #print(f"- BLACK VALID MOVES: {black_moves}\n- WHITE VALID MOVES: {white_moves}")
 print(f"- BLACK IS IN CHECK: {chess.isCheck(chess.board, 'black')}")
+chess.movePiece((0,1),(0,2))
+chess.printBoard()

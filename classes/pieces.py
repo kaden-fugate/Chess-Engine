@@ -8,7 +8,6 @@ class Piece:
         self.valid_moves = []
         self.pos_x = pos_x
         self.pos_y = pos_y
-        self.current_turn = 'white'
     
     def getColor(self):
         return self.color
@@ -22,6 +21,9 @@ class Piece:
     def setValidMoves():
         pass
 
+    def setCoords(self, coords):
+        self.pos_x, self.pos_y = coords
+
 # King class
 class King(Piece):
 
@@ -32,6 +34,7 @@ class King(Piece):
         self.directions = [(-1,1), (0,1), (1,1),
                            (-1,0),        (1,0),
                            (-1,-1),(0,-1),(1,-1)]
+        self.can_castle = True
 
     # kings icon
     def getIcon(self): return self.icon
@@ -91,8 +94,8 @@ class Rook(Piece):
         self.directions = [ [(0,1),(0,2),(0,3),(0,4),(0,5),(0,6),(0,7)], 
                             [(-1,0),(-2,0),(-3,0),(-4,0),(-5,0),(-6,0),(-7,0)],       
                             [(1,0),(2,0),(3,0),(4,0),(5,0),(6,0),(7,0)],
-                            [(0,-1),(0,-2),(0,-3),(0,-4),(0,-5),(0,-6),(0,-7)]
-                            ]
+                            [(0,-1),(0,-2),(0,-3),(0,-4),(0,-5),(0,-6),(0,-7)] ]
+        self.can_castle = True
 
     def getIcon(self): return self.icon
 
@@ -116,10 +119,10 @@ class Bishop(Piece):
     def __init__(self, pos_x, pos_y, color):
         super().__init__(pos_x, pos_y, color)
         self.icon = '\u265D' if color == 'white' else '\u2657'
-        self.directions = [[(-1,1),(-2,2),(-3,3),(-4,4),(-5,5),(-6,6),(-7,7)],
-                           [(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7)],
-                           [(-1,-1),(-2,-2),(-3,-3),(-4,-4),(-5,-5),(-6,-6),(-7,-7)],
-                           [(1,-1),(2,-2),(3,-3),(4,-4),(5,-5),(6,-6),(7,-7)]]
+        self.directions = [ [(-1,1),(-2,2),(-3,3),(-4,4),(-5,5),(-6,6),(-7,7)],
+                            [(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7)],
+                            [(-1,-1),(-2,-2),(-3,-3),(-4,-4),(-5,-5),(-6,-6),(-7,-7)],
+                            [(1,-1),(2,-2),(3,-3),(4,-4),(5,-5),(6,-6),(7,-7)] ]
 
     def getIcon(self): return self.icon
 
@@ -146,7 +149,7 @@ class Knight(Piece):
         self.directions = [      (-1,2),  (1,2),
                            (-2,1),              (2,1),
                            (-2,-1),             (2,-1),
-                                 (-1,-2),  (1,-2)]
+                                 (-1,-2),  (1,-2) ]
 
     def getIcon(self): return self.icon
 
@@ -169,7 +172,7 @@ class Pawn(Piece):
         super().__init__(pos_x, pos_y, color)
         self.icon = '\u265F' if color == 'white' else '\u2659'
         self.directions = [(0,-2),(-1,-1),(0,-1),(1,-1)] if color == 'black' else [(0,2),(-1,1),(0,1),(1,1)]
-        self.initial_jump = True # pas can initially jump 2 squares before moving
+        self.initial_jump = True # pawn can initially jump 2 squares before moving
 
     def getIcon(self): return self.icon
 
@@ -177,27 +180,27 @@ class Pawn(Piece):
 
         for idx, direction in enumerate(self.directions):
 
-                dx, dy = direction
-                new_x, new_y = self.pos_x + dx, self.pos_y + dy
+            dx, dy = direction
+            new_x, new_y = self.pos_x + dx, self.pos_y + dy
 
-                if 0 <= new_x < 8 and 0 <= new_y < 8:
+            if 0 <= new_x < 8 and 0 <= new_y < 8:
 
-                    board_pos = board[new_y][new_x]
-                    prev_pos = board[new_y-1][new_x] if self.color == 'black' else board[new_y+1][new_x]
+                board_pos = board[new_y][new_x]
+                prev_pos = board[new_y-1][new_x] if self.color == 'black' else board[new_y+1][new_x]
 
-                    # if idx 0 (2 square jump), and initial jump variable is true 
-                    # and the two square required in jump are not blocked (board_pos 
-                    # and prev_pos), 2 square jump is valid move
+                # if idx 0 (2 square jump), and initial jump variable is true 
+                # and the two square required in jump are not blocked (board_pos 
+                # and prev_pos), 2 square jump is valid move
 
-                    if idx == 0 and self.initial_jump and (not board_pos and not prev_pos):
-                        self.valid_moves.append( (new_x, new_y) )
+                if idx == 0 and self.initial_jump and (not board_pos and not prev_pos):
+                    self.valid_moves.append( (new_x, new_y) )
 
-                    # if idx 1 or 3 (pawn takes), and the board has a piece that 
-                    # is not the color of the pawn, pawn takes is a valid move. 
-                    elif (idx == 1 or idx == 3) and (board_pos and board_pos.getColor() != self.color): 
-                        self.valid_moves.append( (new_x, new_y) )
+                # if idx 1 or 3 (pawn takes), and the board has a piece that 
+                # is not the color of the pawn, pawn takes is a valid move. 
+                elif (idx == 1 or idx == 3) and (board_pos and board_pos.getColor() != self.color): 
+                    self.valid_moves.append( (new_x, new_y) )
                     
-                    # if idx 2 (pawn takes step forward) and the spot in front of
-                    # the pawn is not blocked, step forward is valid move
-                    elif idx == 2 and not board_pos:
-                        self.valid_moves.append( (new_x, new_y) )
+                # if idx 2 (pawn takes step forward) and the spot in front of
+                # the pawn is not blocked, step forward is valid move
+                elif idx == 2 and not board_pos:
+                    self.valid_moves.append( (new_x, new_y) )
