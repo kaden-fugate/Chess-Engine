@@ -8,6 +8,7 @@ class Piece:
         self.valid_moves = []
         self.pos_x = pos_x
         self.pos_y = pos_y
+        self.debug_mode = False
 
     def getColor(self):
         return self.color
@@ -31,6 +32,10 @@ class Piece:
 
     def setHasMoved(self):
         pass
+    
+    def setDebug(self):
+        self.debug_mode = True if not self.debug_mode else False
+        
 
 # King class
 class King(Piece):
@@ -246,14 +251,18 @@ class Pawn(Piece):
     def __init__(self, pos_x, pos_y, color):
         super().__init__(pos_x, pos_y, color)
         self.icon = '\u265F' if color == 'white' else '\u2659'
-        self.directions = [(0,-2),(-1,-1),(0,-1),(1,-1)] if color == 'black' else [(0,2),(-1,1),(0,1),(1,1)]
-        self.initial_jump = True # pawn can initially jump 2 squares before moving
+        self.directions = ([(0,-2),(-1,-1),(0,-1),(1,-1)] if color == 'black' 
+                           else [(0,2),(-1,1),(0,1),(1,1)])
+        
+        # pawn can initially jump 2 squares before moving
+        self.initial_jump = True 
+        self.enPassantLeft, self.enPassantRight = False, False
 
     def getIcon(self): return self.icon
 
     def setValidMoves(self, board):
         self.valid_moves = []
-
+        
         for idx, direction in enumerate(self.directions):
 
             dx, dy = direction
@@ -262,20 +271,50 @@ class Pawn(Piece):
             if 0 <= new_x < 8 and 0 <= new_y < 8:
 
                 board_pos = board[new_y][new_x]
-                prev_pos = board[new_y-1][new_x] if self.color == 'black' else board[new_y+1][new_x]
+                prev_pos = (board[new_y+1][new_x] if self.color == 'black' 
+                            else board[new_y-1][new_x])
 
                 # if idx 0 (2 square jump), and initial jump variable is true 
-                # and the two square required in jump are not blocked (board_pos 
-                # and prev_pos), 2 square jump is valid move
-                if idx == 0 and self.initial_jump and (not board_pos and not prev_pos):
+                # and the two square required in jump are not blocked 
+                # (board_pos and prev_pos), 2 square jump is valid move
+                if (idx == 0 and self.initial_jump and 
+                    (not board_pos and not prev_pos)):
                     self.valid_moves.append( (new_x, new_y) )
 
                 # if idx 1 or 3 (pawn takes), and the board has a piece that 
-                # is not the color of the pawn, pawn takes is a valid move. 
-                elif (idx == 1 or idx == 3) and (board_pos and board_pos.getColor() != self.color): 
-                    self.valid_moves.append( (new_x, new_y) )
+                # is not the color of the pawn, pawn takes is a valid move.
+                # on top of this, if the en passant value corresponding to
+                # the given idx is set, this is also a valid move.
+                elif (idx == 1 or idx == 3):
+                    
+                    if self.debug_mode:
+                        print(f"""({self.pos_x},{self.pos_y}) ({idx}): \nleft: {self.enPassantLeft}\nright: {self.enPassantRight}\n""")
+                    
+                    # first line handles normal valid move, 2nd and 3rd handles
+                    # en passants
+                    if ((board_pos and board_pos.getColor() != self.color)
+                        or (self.enPassantLeft and idx == 1)
+                            or (self.enPassantRight and idx == 3)): 
+                            if self.debug_mode:
+                                print("setting!")
+                            self.valid_moves.append( (new_x, new_y) )
                     
                 # if idx 2 (pawn takes step forward) and the spot in front of
                 # the pawn is not blocked, step forward is valid move
                 elif idx == 2 and not board_pos:
                     self.valid_moves.append( (new_x, new_y) )
+    
+    def getEnPassant(self): return (self.enPassantLeft, self.enPassantRight)
+    
+    def setEnPassant(self, isLeft, clear=0):
+        
+        if clear:
+            self.enPassantLeft, self.enPassantRight = False
+        
+        else:
+            if isLeft: self.enPassantLeft = True
+            else:      self.enPassantRight = True
+    
+    def setHasMoved(self):
+        self.initial_jump = False
+        

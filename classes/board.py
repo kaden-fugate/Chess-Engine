@@ -1,5 +1,8 @@
 from pieces import King, Queen, Rook, Bishop, Knight, Pawn
-from errors import invalidMoveError
+from errors import invalidMoveError, invalidPromotionError
+
+charArr = ['A','B','C','D','E','F','G','H']
+intArr = ['1','2','3','4','5','6','7','8']
 
 class Board:
 
@@ -12,10 +15,13 @@ class Board:
         self.initColor('black')
 
         # set all valid moves for each piece on the board
-        for rank in (self.board[0], self.board[1], self.board[6], self.board[7]):
+        for rank in (self.board[0], self.board[1], self.board[6], 
+                     self.board[7]):
             for piece in rank:
                 if piece:
                     piece.setValidMoves(self.board)
+        
+        self.board[1][3].setDebug()
         
         # get set all of all valid moves for each color
         self.black_moves, self.white_moves = self.getAllValidMoves()
@@ -80,19 +86,23 @@ class Board:
         for row in self.board:
             for piece in row:
 
-                # if the current square on the board has a piece, add its valid moves to the list
-                # of valid moves for the respective team
+                # if the current square on the board has a piece, add its valid 
+                # moves to the list of valid moves for the respective team
                 if piece:
 
-                    # iterate through each move to add it to the correct colors set of valid moves
+                    # iterate through each move to add it to the correct colors 
+                    # set of valid moves
                     for move in piece.getValidMoves():
                         
-                        if piece.getColor() == 'black': black_valid_moves.add(move)
+                        if piece.getColor() == 'black': 
+                            black_valid_moves.add(move)
+                            
                         else: white_valid_moves.add(move)
     
         return (black_valid_moves, white_valid_moves)
 
-    # given a board and a color to check for, return whether or not that color is in check.
+    # given a board and a color to check for, return whether or not that color 
+    # is in check.
     def isCheck(self, board, color):
 
         king_x, king_y = -1, -1
@@ -105,11 +115,12 @@ class Board:
                 if piece:
                     
                     # if piece is colors king, mark the coordinates
-                    if piece.getColor() == color and (piece.getIcon() == '♔' or piece.getIcon() == '♚'):
+                    if (piece.getColor() == color and 
+                        (piece.getIcon() == '♔' or piece.getIcon() == '♚')):
                         king_x, king_y = idx_x, idx_y
 
-                    # if piece is of opposite color, add all of its moves to the set of all moves
-                    # for the opposite team.
+                    # if piece is of opposite color, add all of its moves to 
+                    # the set of all moves for the opposite team.
                     elif piece.getColor() != color:
                         for move in piece.getValidMoves():
                             opposite_color_moves.add(move)
@@ -133,12 +144,20 @@ class Board:
                 end = self.notationToPos(move[2] + move[3])
 
                 self.movePiece(start, end)
+                if self.canPromote(end):
+                    while True:
+                        try:
+                            self.promote(end)
+                            break
+                        except invalidPromotionError as err:
+                            print(err)
                 break
             
             except invalidMoveError as err:
                 print(err)
 
-        self.current_turn = 'white' if self.current_turn == 'black' else 'black'
+        self.current_turn = ('white' if self.current_turn == 'black' 
+                             else 'black')
 
     def movePiece(self, start_pos, end_pos):
 
@@ -149,55 +168,104 @@ class Board:
         # get positions on board
         start = self.board[start_y][start_x]
 
-        # if start position on board doesnt have piece, no piece to move therefore we should raise
-        # an invalid move error.
+        # if start position on board doesnt have piece, no piece to move 
+        # therefore we should raise an invalid move error.
         if not start: 
-            raise invalidMoveError(f"Invalid Move Error: No Piece at Position {start_pos}")
+            raise invalidMoveError(f"""Invalid Move Error: No Piece at Position 
+                                   {start_pos}""")
 
-        # if piece at start position is not the color is not that of the current turns color, 
-        # current move is invalid.
+        # if piece at start position is not the color is not that of the 
+        # current turns color, current move is invalid.
         elif start.getColor() != self.current_turn: 
-            raise invalidMoveError(f"Invalid Move Error: Piece at Position {start_pos} is not {self.current_turn}")
+            raise invalidMoveError(f"""Invalid Move Error: Piece at Position 
+                                   {start_pos} is not {self.current_turn}""")
 
-        # if end position for piece is not 
+        # if end position for piece is not valid
         elif end_pos not in start.getValidMoves(): 
-            raise invalidMoveError(f"Invalid Move Error: Piece at {start_pos} can't Move to {end_pos}")
+            raise invalidMoveError(f"""Invalid Move Error: Piece at {start_pos} 
+                                   can't Move to {end_pos}\nvalid moves for 
+                                   piece: { [self.posToNotation(move) 
+                                   for move in start.getValidMoves()]}\n""")
         
+        # handle castling
         if self.isAttemptingToCastle(start_pos, end_pos):
 
-            self.board[start_y][start_x].canCastle(self.board, self.current_turn)
+            start.canCastle(self.board, self.current_turn)
 
             # short castle 
             if end_x - start_x > 0:
-
                 # if the king can castle short
-                if self.board[start_y][start_x].getCastleShort():
+                if start.getCastleShort():
                     self.castle(True)
                 
                 # raise error if the king couldnt castle
-                else: raise invalidMoveError(f"Invalid Move Error: King at {start_pos} can't Castle Short")
+                else: raise invalidMoveError(f"""Invalid Move Error: King at 
+                                             {start_pos} can't Castle Short""")
 
             # long castle
             else:
-
-                if self.board[start_y][start_x].getCastleLong(): self.castle(False)
+                if start.getCastleLong(): 
+                    self.castle(False)
 
                 # raise error if the king couldnt castle
-                else: raise invalidMoveError(f"Invalid Move Error: King at {start_pos} can't Castle Long")
+                else: raise invalidMoveError(f"""Invalid Move Error: King at 
+                                             {start_pos} can't Castle Long""")
 
         # move the piece
         self.board[end_y][end_x] = start
         self.board[start_y][start_x] = None
         self.updatePieces()
 
-        # if this move will put our king in check, the move is invalid. reverse the move and
-        # raise invalid move error
+        # if this move will put our king in check, the move is invalid. reverse 
+        # the move and raise invalid move error
         if self.isCheck(self.board, self.current_turn):
             self.board[start_y][start_x] = start
             self.board[end_y][end_x] = None
             self.updatePieces()
-            raise invalidMoveError(f"Invalid Move Error: Moving Piece from {start_pos} to {end_pos} will Kill the King")
+            raise invalidMoveError(f"""Invalid Move Error: Moving Piece from 
+                                   {start_pos} to {end_pos} will Kill the 
+                                   King""")
 
+        end = self.board[end_y][end_x]
+        isPawn = end.getIcon() == '\u265F' or end.getIcon() == '\u2659'
+        # if our piece is a pawn and has jumped two spaces ahead next to an
+        # opposing pawn, set that pawns en passant field
+        if abs(end_y - start_y) == 2 and isPawn:
+            
+            if end_x - 1 >= 0:
+                left = self.board[end_y][end_x - 1]
+                if left:
+                    
+                    leftIsPawn = (left.getIcon() == '\u265F' 
+                                or left.getIcon() == '\u2659')
+                    if leftIsPawn and left.getColor() != self.current_turn:
+                        left.setEnPassant(False)
+                        self.updatePieces()
+            
+            if end_x + 1 <= 7:
+                right = self.board[end_y][end_x + 1]
+                if right: 
+                    
+                    rightIsPawn = (right.getIcon() == '\u265F' 
+                                or right.getIcon() == '\u2659')
+                    if rightIsPawn and right.getColor() != self.current_turn: 
+                        right.setEnPassant(True)
+                        self.updatePieces()
+        
+        if isPawn:
+            enPassant = end.getEnPassant()
+            print(f"""{end.getCoords()}:\nenPassant: {enPassant}\nend_x - start_x: {end_x - start_x}\n""")
+            if ((end_x - start_x == 1 and enPassant[0]) 
+                or (end_x - start_x == -1 and enPassant[1])):
+                
+                if (end.getColor() == 'white'):
+                    self.board[end_y - 1][end_x] = None
+                
+                else:
+                    self.board[end_y + 1][end_x] = None
+                
+                end.setEnpassant(None, True)
+        
         # update the pieces coordinates and set its "hasMoved" data member
         self.board[end_y][end_x].setCoords((end_x, end_y))
         self.board[end_y][end_x].setHasMoved()
@@ -212,8 +280,9 @@ class Board:
         short_rook = self.board[rank][7]
         long_rook = self.board[rank][0]
 
-        # if we're dealing with a short castle, we can set the new coords, update has moved, move
-        # the piece to its new place and delete it from the old position
+        # if we're dealing with a short castle, we can set the new coords, 
+        # update has moved, move the piece to its new place and delete it from 
+        # the old position
         if is_short:
 
             short_rook.setCoords((rook_file,rank))
@@ -221,8 +290,8 @@ class Board:
             self.board[rank][rook_file] = short_rook
             self.board[rank][7] = None
 
-        # same rules with long castle as we have for short but we'll be dealing with the 
-        # 'long_rook' variable now instead of the 'short_rook' one
+        # same rules with long castle as we have for short but we'll be dealing 
+        # with the 'long_rook' variable now instead of the 'short_rook' one
         else:
 
             long_rook.setCoords((rook_file,rank))
@@ -239,9 +308,11 @@ class Board:
         end_x, end_y = end_pos
 
         # if current piece is king
-        if self.board[start_y][start_x].getIcon() == '♔' or self.board[start_y][start_x].getIcon() == '♚':
+        if (self.board[start_y][start_x].getIcon() == '♔' 
+            or self.board[start_y][start_x].getIcon() == '♚'):
 
-            # and end pos is two from start pos (x axis), then king is attempting to castle
+            # and end pos is two from start pos (x axis), then king is 
+            # attempting to castle
             if abs(start_x - end_x) == 2: return True
         
         # else, king not attempting case
@@ -256,27 +327,63 @@ class Board:
         elif notation == 'OOO':
             return (2,0) if self.current_turn == 'white' else (2,7)
 
-        # convert rank to y pos
-        if notation[0] == 'A' or notation[0] == 'a': pos_x = 0
-        elif notation[0] == 'B' or notation[0] == 'b': pos_x = 1
-        elif notation[0] == 'C' or notation[0] == 'c': pos_x = 2
-        elif notation[0] == 'D' or notation[0] == 'd': pos_x = 3
-        elif notation[0] == 'E' or notation[0] == 'e': pos_x = 4
-        elif notation[0] == 'F' or notation[0] == 'f': pos_x = 5
-        elif notation[0] == 'G' or notation[0] == 'g': pos_x = 6
-        elif notation[0] == 'H' or notation[0] == 'h': pos_x = 7
-
         # convert file to x pos
-        if notation[1] == '1': pos_y = 0
-        elif notation[1] == '2': pos_y = 1
-        elif notation[1] == '3': pos_y = 2
-        elif notation[1] == '4': pos_y = 3
-        elif notation[1] == '5': pos_y = 4
-        elif notation[1] == '6': pos_y = 5
-        elif notation[1] == '7': pos_y = 6
-        elif notation[1] == '8': pos_y = 7
+        for i in range(0, 8): 
+            if notation[0].upper() == charArr[i]: pos_x = i
+
+        # convert rank to y pos
+        for i in range(0, 8): 
+            if notation[1] == intArr[i]: pos_y = i
 
         return (pos_x, pos_y)
+    
+    def posToNotation(self, position):
+        
+        xcoord = charArr[position[0]]
+        ycoord = intArr[position[1]]
+        
+        return xcoord + ycoord
+    
+    def canPromote(self, end):
+        
+        x, y = end[0], end[1]
+        movedPiece = self.board[y][x]
+        
+        # check if player moved piece to opposite file on board
+        if ((y == 7 and movedPiece.getColor() == 'white') 
+            or (y == 0 and movedPiece.getColor() == 'black')):
+            
+            # check if piece was pawn 
+            if (movedPiece.getIcon() == '\u265F' 
+                or movedPiece.getIcon() == '\u2659'):
+                return True
+        
+        return False
+    
+    def promote(self, end):
+        
+        promotion = input(f"""Q = Queen, R = Rook, N = Knight, B = Bishop\nPromote to: """)
+        
+        # check promotion was valid
+        if promotion.upper() not in ['Q', 'R', 'N', 'B']:
+            raise invalidPromotionError(f"""Cannot promote to {promotion.upper()}""")
+            
+        else:
+            x, y = end[0], end[1]
+            color = self.board[y][x].getColor()
+            new_piece = None
+            
+            if promotion.upper() == 'Q':
+                new_piece = Queen(x, y, color)
+            elif promotion.upper() == 'R':
+                new_piece = Rook(x, y, color)
+            elif promotion.upper() == 'N':
+                new_piece = Knight(x, y, color)
+            else:
+                new_piece = Bishop(x, y, color)
+            
+            self.board[y][x] = new_piece
+            
 
 chess = Board()
 for _ in range(0, 20):
