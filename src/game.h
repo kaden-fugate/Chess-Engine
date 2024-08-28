@@ -4,7 +4,9 @@
 #include "../positions/basic.h"
 
 void print_board();
+
 uint64_t n_valid_moves(uint8_t, uint64_t);
-uint64_t wp_valid_moves(uint8_t, uint64_t, uint64_t);
+uint64_t wp_valid_moves(uint8_t);
+uint64_t bp_valid_moves(uint8_t);
 
 #endif
