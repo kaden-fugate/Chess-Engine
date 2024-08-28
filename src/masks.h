@@ -8,7 +8,7 @@
 // hexadecimal representations of the below boards:
 //
 //  mv1_knp_mask:
-//
+//                               MSB
 //           0  1  1  1  1  1  1  1
 //           0  1  1  1  1  1  1  1
 //           0  1  1  1  1  1  1  1
@@ -17,6 +17,7 @@
 //           0  1  1  1  1  1  1  1
 //           0  1  1  1  1  1  1  1
 //           0  1  1  1  1  1  1  1
+//          LSB
 //
 //  mv2_knp_mask:
 //
@@ -29,8 +30,8 @@
 //           1  1  1  1  1  1  1  0
 //           1  1  1  1  1  1  1  0
 //
-uint64_t mv1_knp_mask = 0x7F7F7F7F7F7F7F7F;
-uint64_t mv2_knp_mask = 0xFEFEFEFEFEFEFEFE;
+extern uint64_t mv1_knp_mask;
+extern uint64_t mv2_knp_mask;
 
 // hexadecimal representations of the below boards:
 //
@@ -56,7 +57,7 @@ uint64_t mv2_knp_mask = 0xFEFEFEFEFEFEFEFE;
 //           1  1  1  1  1  1  0  0
 //           1  1  1  1  1  1  0  0
 //
-uint64_t mv1_n_mask = 0x3F3F3F3F3F3F3F3F;
-uint64_t mv2_n_mask = 0xFCFCFCFCFCFCFCFC;
+extern uint64_t mv1_n_mask;
+extern uint64_t mv2_n_mask;
 
 #endif
