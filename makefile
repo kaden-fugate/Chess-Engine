@@ -1,7 +1,10 @@
 CC = gcc
 CFLAGS = -Wall -g
 
-all: chess
+all: chess magic
+
+magic: magic.o
+	$(CC) $(CFLAGS) magic.o -o gen_magic
 
 chess: main.o game.o masks.o basic.o
 	$(CC) $(CFLAGS) main.o game.o masks.o basic.o -o chess
@@ -15,8 +18,11 @@ game.o: src/game.c src/game.h
 masks.o: src/masks.c src/masks.h
 	$(CC) -c -g src/masks.c
 
+magic.o: magic/magic.c magic/magic.h
+	$(CC) -c -g magic/magic.c
+
 basic.o: positions/basic.c positions/basic.h
 	$(CC) -c -g positions/basic.c
 
 clean: 
-	rm -f main.o chess
+	rm -f *.o chess gen_magic
