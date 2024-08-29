@@ -54,29 +54,34 @@ uint64_t r_mask(uint8_t pos){
 
 }
 
+uint64_t b_mask(uint8_t pos){
+
+    uint64_t mask = 0x0;
+    int8_t x = pos % 8, y = pos / 8, dx, dy; 
+
+    // set possible blocker positions to the north-east
+    for (dx = x + 1, dy = y + 1; dx < 7 && dy < 7; dx++, dy++) 
+        mask |= (1ULL << (dy * 8 + dx));
+
+    // set possible blocker positions to the south-east
+    for (dx = x + 1, dy = y - 1; dx < 7 && dy > 0; dx++, dy--) 
+        mask |= (1ULL << (dy * 8 + dx));
+
+    // set possible blocker positions to north-west
+    for (dx = x - 1, dy = y + 1; dx > 0 && dy < 7; dx--, dy++) 
+        mask |= (1ULL << (dy * 8 + dx)); 
+
+    // set possible blocker positions to south-west
+    for (dx = x - 1, dy = y - 1; dx > 0 && dy > 0; dx--, dy--) 
+        mask |= (1ULL << (dy * 8 + dx)); 
+
+    return mask;
+
+}
+
 int main(){
 
-    for (uint8_t i = 0; i < 64; i++){
-
-        uint64_t r_pos_mask = r_mask(i);
-        printf("(%d) r_pos_mask: %llx\n\n", i, r_pos_mask);
-
-        for (int8_t j = 7; j >= 0; j--){
-
-            for (uint8_t k = 0; k < 8; k++){
-
-                printf("   %d   ", (r_pos_mask & (1ULL << (j * 8 + k))) ? 1 : 0);
-
-            }
-
-            printf("\n\n");
-
-        }
-
-        printf("\n\n");
-
-    }
-
+     
 
     return 0;
 
