@@ -1,5 +1,6 @@
 #include "game.h"
 #include "masks.h"
+#include "magic.h"
 
 // basic function that will print the current state of the board
 void print_board(){
@@ -10,7 +11,9 @@ void print_board(){
     uint64_t vbnm = n_valid_moves(57, bk | bq | br | bb | bn | bp);
     
     uint64_t vwpm = wp_valid_moves(45);
-    uint64_t vbpm = bp_valid_moves(52);    
+    uint64_t vbpm = bp_valid_moves(52);
+
+    uint64_t vwrm = q_valid_moves(29, allw, allb); 
 
     for (int i = 7; i >= 0; i--){
 
@@ -19,18 +22,20 @@ void print_board(){
         for (int j = 0; j < 8; j++){
             
             // debug for printing result of move generation
-            if (vwpm & (1ULL << ((i * 8) + j))){
-                printf("   +   |");
-            }
-            else if (vbpm & (1ULL << ((i * 8) + j))){
-                printf("   -   |");
-            }
-            else if (vwnm & (1ULL << ((i * 8) + j))){
-                printf("   *   |");
-            }
-            else if (vbnm & (1ULL << ((i * 8) + j))){
-                printf("   /   |");
-            }
+            if (vwrm & (1ULL << ((i * 8) + j)))
+                printf("   #   |");
+            // else if (vwpm & (1ULL << ((i * 8) + j))){
+            //     printf("   +   |");
+            // }
+            // else if (vbpm & (1ULL << ((i * 8) + j))){
+            //     printf("   -   |");
+            // }
+            // else if (vwnm & (1ULL << ((i * 8) + j))){
+            //     printf("   *   |");
+            // }
+            // else if (vbnm & (1ULL << ((i * 8) + j))){
+            //     printf("   /   |");
+            // }
             
             // print black pieces
             else if (bk & (1ULL << ((i * 8) + j))) {
@@ -315,5 +320,34 @@ uint64_t bp_valid_moves(uint8_t pos){
     valid |= ((p_loc & mv2_knp_mask) >> 9) & allw;
 
     return valid;
+
+}
+
+uint64_t r_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
+
+    uint64_t blockers = rmasks[pos] & (friendly | opp),
+             magic = (blockers * r_magic[pos]) >> (64 - r_bits[pos]),
+             attack = r_magic_ht[pos][magic];
+
+
+    return attack & ~(friendly);
+
+}
+
+uint64_t b_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
+
+    uint64_t blockers = bmasks[pos] & (friendly | opp),
+             magic = (blockers * b_magic[pos]) >> (64 - b_bits[pos]),
+             attack = b_magic_ht[pos][magic];
+
+
+    return attack & ~(friendly);
+
+}
+
+uint64_t q_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
+
+    return r_valid_moves(pos, friendly, opp) 
+         | b_valid_moves(pos, friendly, opp);
 
 }
