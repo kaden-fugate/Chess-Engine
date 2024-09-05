@@ -3,17 +3,9 @@
 #include "magic.h"
 
 // basic function that will print the current state of the board
-void print_board(){
+void print_board(uint8_t pos){
 
     printf("|-------|-------|-------|-------|-------|-------|-------|-------|\n");
-
-    uint64_t vwnm = n_valid_moves(1, wk | wq | wr | wb | wn | wp);
-    uint64_t vbnm = n_valid_moves(57, bk | bq | br | bb | bn | bp);
-    
-    uint64_t vwpm = wp_valid_moves(45);
-    uint64_t vbpm = bp_valid_moves(52);
-
-    uint64_t vwrm = q_valid_moves(29, allw, allb); 
 
     for (int i = 7; i >= 0; i--){
 
@@ -22,59 +14,49 @@ void print_board(){
         for (int j = 0; j < 8; j++){
             
             // debug for printing result of move generation
-            if (vwrm & (1ULL << ((i * 8) + j)))
-                printf("   #   |");
-            // else if (vwpm & (1ULL << ((i * 8) + j))){
-            //     printf("   +   |");
-            // }
-            // else if (vbpm & (1ULL << ((i * 8) + j))){
-            //     printf("   -   |");
-            // }
-            // else if (vwnm & (1ULL << ((i * 8) + j))){
-            //     printf("   *   |");
-            // }
-            // else if (vbnm & (1ULL << ((i * 8) + j))){
-            //     printf("   /   |");
-            // }
+            if (pos < 64 & (1ULL << pos) & (1ULL << ((i * 8) + j)))
+                printf("   ^   |");
+            else if(pos < 64 & (moves[pos]) & (1ULL << ((i * 8) + j)))
+                printf("   *   |");
             
             // print black pieces
             else if (bk & (1ULL << ((i * 8) + j))) {
-                printf("   K   |", i, j);
+                printf("   k   |", i, j);
             }
             else if (bq & (1ULL << ((i * 8) + j))) {
-                printf("   Q   |", i, j);
+                printf("   q   |", i, j);
             }
             else if (br & (1ULL << ((i * 8) + j))) {
-                printf("   R   |", i, j);
+                printf("   r   |", i, j);
             }
             else if (bb & (1ULL << ((i * 8) + j))) {
-                printf("   B   |", i, j);
+                printf("   b   |", i, j);
             }
             else if (bn & (1ULL << ((i * 8) + j))) {
-                printf("   N   |", i, j);
+                printf("   n   |", i, j);
             }
             else if (bp & (1ULL << ((i * 8) + j))) {
-                printf("   P   |", i, j);
+                printf("   p   |", i, j);
             }
             
             // print white pieces
             else if (wk & (1ULL << ((i * 8) + j))) {
-                printf("   k   |", i, j);
+                printf("   K   |", i, j);
             }
             else if (wq & (1ULL << ((i * 8) + j))) {
-                printf("   q   |", i, j);
+                printf("   Q   |", i, j);
             }
             else if (wr & (1ULL << ((i * 8) + j))) {
-                printf("   r   |", i, j);
+                printf("   R   |", i, j);
             }
             else if (wb & (1ULL << ((i * 8) + j))) {
-                printf("   b   |", i, j);
+                printf("   B   |", i, j);
             }
             else if (wn & (1ULL << ((i * 8) + j))) {
-                printf("   n   |", i, j);
+                printf("   N   |", i, j);
             }
             else if (wp & (1ULL << ((i * 8) + j))) {
-                printf("   p   |", i, j);
+                printf("   P   |", i, j);
             }
 
             // print unoccupied space
@@ -86,6 +68,27 @@ void print_board(){
         printf("|-------|-------|-------|-------|-------|-------|-------|-------|\n");
 
     }
+
+}
+
+// 
+// this function just prints a given bitboard. just makes debugging easier
+//
+void print_bitboard(uint64_t board){
+
+    for (int8_t i = 7; i >= 0; i--){
+
+        for (int8_t j = 0; j < 8; j++){
+
+            printf("   %d   ", (board & (1ULL << (i * 8 + j))) ? 1 : 0);
+
+        }
+
+        printf("\n\n");
+
+    }
+
+    printf("\n");
 
 }
 
@@ -191,7 +194,7 @@ uint64_t n_valid_moves(uint8_t pos, uint64_t friendly_squares){
 uint64_t wp_valid_moves(uint8_t pos){
 
     // shift a bit to the position of the pawn
-    uint64_t p_loc = 1ULL << pos;
+    uint64_t p_loc = 1ULL << pos, ep = epsq == 64 ? 0x0 : (1ULL << epsq);
 
     if ( !(p_loc & allw) ) return (uint64_t) 0x0;
 
@@ -234,10 +237,10 @@ uint64_t wp_valid_moves(uint8_t pos){
 
     // move 3: pawn attacks left. we'll need to use the bitmask first then
     // check that an opposing piece is in the correct position
-    valid |= ((p_loc & mv1_knp_mask) << 7) & allb;
+    valid |= ((p_loc & mv1_knp_mask) << 7) & (allb | ep);
 
     // move 4: same as move 3 but with a new mask and a shift of 9 instead of 7
-    valid |= ((p_loc & mv2_knp_mask) << 9) & allb;
+    valid |= ((p_loc & mv2_knp_mask) << 9) & (allb | ep);
 
     return valid;
 
@@ -272,7 +275,7 @@ uint64_t wp_valid_moves(uint8_t pos){
 uint64_t bp_valid_moves(uint8_t pos){
 
     // shift a bit to the position of the pawn
-    uint64_t p_loc = 1ULL << pos;
+    uint64_t p_loc = 1ULL << pos, ep = epsq == 64 ? 0x0 : (1ULL << epsq);
 
     if ( !(p_loc & allb) ) return (uint64_t) 0x0;
 
@@ -314,23 +317,12 @@ uint64_t bp_valid_moves(uint8_t pos){
 
     // move 3: pawn attacks left. we'll need to use the bitmask first then
     // check that an opposing piece is in the correct position
-    valid |= ((p_loc & mv1_knp_mask) >> 7) & allw;
+    valid |= ((p_loc & mv1_knp_mask) >> 7) & (allw | ep);
 
     // move 4: same as move 3 but with a new mask and a shift of 9 instead of 7
-    valid |= ((p_loc & mv2_knp_mask) >> 9) & allw;
+    valid |= ((p_loc & mv2_knp_mask) >> 9) & (allw | ep);
 
     return valid;
-
-}
-
-uint64_t r_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
-
-    uint64_t blockers = rmasks[pos] & (friendly | opp),
-             magic = (blockers * r_magic[pos]) >> (64 - r_bits[pos]),
-             attack = r_magic_ht[pos][magic];
-
-
-    return attack & ~(friendly);
 
 }
 
@@ -345,9 +337,146 @@ uint64_t b_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
 
 }
 
+uint64_t r_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
+
+    uint64_t blockers = rmasks[pos] & (friendly | opp),
+             magic = (blockers * r_magic[pos]) >> (64 - r_bits[pos]),
+             attack = r_magic_ht[pos][magic];
+
+
+    return attack & ~(friendly);
+
+}
+
 uint64_t q_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
 
     return r_valid_moves(pos, friendly, opp) 
          | b_valid_moves(pos, friendly, opp);
+
+}
+
+//
+// 8 possible moves:
+//                                     63rd bit
+// |----|----|----|----|----|----|----|----|
+// |    |    |  1 |  2 |  3 |    |    |    |
+// |----|----|----|----|----|----|----|----|
+// |    |    |  8 | *  |  4 |    |    |    |
+// |----|----|----|----|----|----|----|----|
+// |    |    |  7 |  6 |  5 |    |    |    |
+// |----|----|----|----|----|----|----|----|
+// |    |    |    |    |    |    |    |    |
+// |----|----|----|----|----|----|----|----|
+// |    |    |    |    |    |    |    |    |
+// |----|----|----|----|----|----|----|----|
+// |    |    |    |    |    |    |    |    |
+// |----|----|----|----|----|----|----|----|
+// |    |    |    |    |    |    |    |    |
+// |----|----|----|----|----|----|----|----|
+//  0th bit -- left bit shift (<<) will move right and up the board
+//
+// (Figure 2.)
+//
+uint64_t k_valid_moves(uint8_t pos, uint64_t friendly){
+
+    uint64_t valid = 0x0;
+    uint64_t west = ((1ULL << pos) & mv1_knp_mask),
+             east = ((1ULL << pos) & mv2_knp_mask);
+
+    valid |= (west << 7) | (west >> 1) | (west >> 9) 
+          |  (east << 9) | (east << 1) | (east >> 7)
+          |  ((1ULL << pos) << 8) | ((1ULL << pos) >> 8);
+
+    return valid & ~friendly;
+
+}
+
+void parse_fen(char *fen){
+
+    uint8_t i, field = 0, cur = 56;
+    uint64_t pos_bit;
+
+    for (i = 0; fen[i] != '\0'; i++) {
+
+        // moving to next field in fen
+        if (fen[i] == ' ') field++;
+
+        // first field (position parsing)
+        else if (field == 0) {
+
+            // check if char is an integer. if so, shift cur square ahead by
+            // n squares.
+            if ( (int) fen[i] >= 48 && (int) fen[i] <= 57) 
+                cur += (((int) fen[i]) - 48);
+
+            // check if char is '/' 
+            else if (fen[i] == '/') cur -= 16;
+
+            // char is a piece indicator
+            else {
+
+                pos_bit = (1ULL << cur);
+
+                if (fen[i] == 'k') bk |= pos_bit;
+                else if (fen[i] == 'q') bq |= pos_bit;
+                else if (fen[i] == 'r') br |= pos_bit;
+                else if (fen[i] == 'b') bb |= pos_bit;
+                else if (fen[i] == 'n') bn |= pos_bit;
+                else if (fen[i] == 'p') bp |= pos_bit;
+
+                else if (fen[i] == 'K') wk |= pos_bit;
+                else if (fen[i] == 'Q') wq |= pos_bit;
+                else if (fen[i] == 'R') wr |= pos_bit;
+                else if (fen[i] == 'B') wb |= pos_bit;
+                else if (fen[i] == 'N') wn |= pos_bit;
+                else if (fen[i] == 'P') wp |= pos_bit;
+
+                // check piece color
+                if ( (int) fen[i] >= 65 && (int) fen[i] <= 90 ) 
+                    allb |= pos_bit;
+
+                else allw |= pos_bit;
+
+                cur++;
+
+            }
+
+        } 
+        
+        // second field (player turn)
+        else if (field == 1) {
+
+            if (fen[i] == 'w') turn = 0;
+            else turn = 1;
+
+        }
+
+        // third field (castling rights)
+        else if (field == 2) {
+
+            if (fen[i] == 'K') wksc = 1;
+            else if (fen[i] == 'Q') wqsc = 1;
+            else if (fen[i] == 'k') bksc = 1;
+            else if (fen[i] == 'q') bqsc = 1;
+
+        }
+
+        // fourth field (enpassant square)
+        else if (field == 3) {
+            
+            // no enpassant
+            if (fen[i] == '-') epsq = 64;
+            
+            else {
+
+                printf("fen[i]: %c\n", fen[i]);
+                epsq = (((int) fen[i] - 97)) + (8 * ((int) fen[i + 1] - 49));
+                i++;
+
+            }
+
+        }
+
+    }
 
 }

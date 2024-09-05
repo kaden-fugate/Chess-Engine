@@ -5,9 +5,9 @@
 
 int main(){
 
-    allw = wk | wq | wr | wb | wn | wp;
-    allb = bk | bq | br | bb | bn | bp;
-    print_board();
+    parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b - h8");
+
+    print_board(65);
 
     return 0;
 

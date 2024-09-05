@@ -1,18 +1,31 @@
 #include "basic.h"
 
-uint64_t wk = 0x0000000000000010;
-uint64_t wq = 0x0000000000000008;
-uint64_t wr = 0x0000000000000081;
-uint64_t wb = 0x0000000000000024;
-uint64_t wn = 0x0000000000000042;
-//uint64_t wp = 0x000000000000FF00;
-uint64_t wp = 0x000020000000FF00;
-uint64_t allw = 0;
+uint64_t moves[256] = { 0 };
+uint8_t move_count = 0, turn = 0, epsq = 64;
 
-uint64_t bk = 0x1000000000000000;
-uint64_t bq = 0x0800000000000000;
-uint64_t br = 0x8100000000000000;
-uint64_t bb = 0x2400000000000000;
-uint64_t bn = 0x4200000000000000;
-uint64_t bp = 0x00FF000000000000;
-uint64_t allb = 0;
+
+uint64_t wk   = 0x0,
+         wq   = 0x0,
+         wr   = 0x0,
+         wb   = 0x0,
+         wn   = 0x0,
+         wp   = 0x0,
+         allw = 0x0,
+         epw  = 0x0,
+         wa   = 0x0;
+
+uint8_t wksc = 0,
+        wqsc = 0;
+
+uint64_t bk   = 0x0,
+         bq   = 0x0,
+         br   = 0x0,
+         bb   = 0x0,
+         bn   = 0x0,
+         bp   = 0x0,
+         allb = 0x0,
+         epb  = 0x0,
+         ba   = 0x0;
+
+uint8_t bksc = 0,
+        bqsc = 0;
