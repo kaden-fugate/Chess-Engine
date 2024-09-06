@@ -60,4 +60,10 @@ extern uint64_t mv2_knp_mask;
 extern uint64_t mv1_n_mask;
 extern uint64_t mv2_n_mask;
 
+extern uint64_t wks_msk;
+extern uint64_t wqs_msk;
+
+extern uint64_t bks_msk;
+extern uint64_t bqs_msk;
+
 #endif
