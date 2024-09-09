@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "game_state.h"
+
 // values for indexing into the array of pieces bitboards
 // white pieces
 #define K 0
@@ -37,6 +39,8 @@
 #define kingside 1
 #define queenside 2
 #define both 3
+
+
 
 extern uint32_t move_list[256];
 extern uint8_t move_count;

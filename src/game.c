@@ -68,7 +68,7 @@ void print_board(uint8_t pos){
         printf("    |-------|-------|-------|-------|-------|-------|-------|-------|\n");
 
     }
-    printf("\n     A       B       C       D       E       F       G       H       \n");
+    printf("\n        A       B       C       D       E       F       G       H       \n");
 
 }
 
@@ -485,7 +485,10 @@ uint8_t get_castle(uint8_t color) {
     uint64_t ks_msk = color ? bks_msk : wks_msk, 
     qs_msk = color ? bqs_msk : wqs_msk, 
     attack = color ? bitboards[wa] : bitboards[ba],
-    all = bitboards[allw] | bitboards[allb];
+    all = bitboards[allw] | bitboards[allb],
+    king = color ? bitboards[k] : bitboards[K];
+
+    if (king & attack) return none;
 
     // get castling rights for color. init vars to hold result (qsc, ksc)
     uint8_t ks_r = color ? bksc : wksc, qs_r = color ? bqsc : wqsc, ksc, qsc;
@@ -493,11 +496,6 @@ uint8_t get_castle(uint8_t color) {
     // check that castling is not impeded
     ksc = (ks_r && !(ks_msk & (all | attack))) ? 1 : 0;
     qsc = (qs_r && !(qs_msk & (all | attack))) ? 1 : 0;
-
-    print_bitboard(attack);
-    // printf("(%s) color: %d\n", color ? "wa" : "ba", color);
-    // printf("ks_r: %d\nqs_r: %d\n", ks_r, qs_r);
-    // printf("ks_msk & (all): %d\nks_msk & (attack): %d\nqs_msk & (all): %d\nqs_msk & (attack): %d\n", ks_msk & all ? 1 : 0, ks_msk & attack ? 1 : 0, qs_msk & all ? 1 : 0, qs_msk & attack ? 1 : 0);
 
     // return which sides can castle
     return (ksc && qsc) ? both : (ksc ? kingside : (qsc ? queenside : none));
@@ -531,7 +529,8 @@ uint8_t get_castle(uint8_t color) {
 //
 uint64_t k_valid_moves(uint8_t pos, uint64_t friendly){
 
-    uint8_t board_idx =  !(friendly & ~bitboards[allw]) ? wa : ba;
+    uint8_t board_idx =  !(friendly & ~bitboards[allw]) ? wa : ba,
+            opp_idx = board_idx == wa ? ba : wa;
     uint64_t valid = 0x0;
     uint64_t west = ((1ULL << pos) & mv1_knp_mask),
              east = ((1ULL << pos) & mv2_knp_mask);
@@ -542,7 +541,7 @@ uint64_t k_valid_moves(uint8_t pos, uint64_t friendly){
 
     bitboards[board_idx] |= valid;
 
-    return valid & ~friendly;
+    return valid & ~friendly & ~bitboards[opp_idx];
 
 }
 
@@ -562,12 +561,14 @@ uint8_t lsb(uint64_t board) {
 void idx_to_pos(uint8_t idx) {
 
     uint8_t file, rank;
-    char *fl_arr = "ABCDEFGH", *rk_arr = "123456789";
+    char *fl_arr = "abcdefgh", *rk_arr = "123456789";
 
     file = idx % 8, rank = idx / 8;
     printf("%c%c", fl_arr[file], rk_arr[rank]);
 
 }
+
+
 
 //
 // this function will generate all moves possible on the current board. we're
@@ -600,15 +601,20 @@ void idx_to_pos(uint8_t idx) {
 //                         
 // 24 total bits needed to encode all of this information.  
 //  
-void gen_moves(){
+void gen_moves(uint8_t legal){
 
     move_count = 0;
 
     uint8_t piece, opp = turn ? allw : allb, friendly = turn ? allb : allw,
             source, target, start = turn ? k : K, end = turn ? p : P,
-            prm_flg, cap_flg, dbl_flg, ep_flg, cstl_flg, promote;
-            
+            prm_flg, cap_flg, dbl_flg, ep_flg, cstl_flg, promote, is_legal;
+    
+    uint32_t move;
+
     uint64_t board, moves;
+
+    // clear past attacks when updating moves
+    bitboards[turn ? ba : wa] = 0x0;
 
     // iterate through all pieces
     for (piece = start; piece <= end; piece++) {
@@ -672,6 +678,9 @@ void gen_moves(){
 
             }
 
+            // we can stop here if we only need pseudo-legal moves
+            if (!legal) { board &= ~(1ULL << source); continue; }
+
             // add all generated moves to the list
             while (moves) {
 
@@ -683,10 +692,11 @@ void gen_moves(){
                 moves &= ~(1ULL << target);
 
                 // check if promotion
-                if ((piece == P || piece == p) && target >= 56) prm_flg = 1;
+                if ((piece == P && target >= 56) || (piece == p && target <= 7)) 
+                    prm_flg = 1;
 
                 // check if capture
-                if ((1ULL << target) & opp) cap_flg = 1;
+                if ((1ULL << target) & bitboards[opp]) cap_flg = 1;
 
                 // check if double pawn jump
                 if ((piece == P || piece == p) 
@@ -694,25 +704,59 @@ void gen_moves(){
                     dbl_flg = 1;
 
                 // check if en passant
-                if (target == epsq) ep_flg = 1;
-
-                // check if castle
-
+                if (target == epsq && (piece == P || piece == p)) ep_flg = 1;
 
                 // add to the move list
                 if (!prm_flg){
-                    move_list[move_count] = ENCODE(source, target, piece, none, 
-                                        cap_flg, dbl_flg, ep_flg, cstl_flg);
-                    move_count++;
+
+                    move = ENCODE(source, target, piece, none, cap_flg, 
+                           dbl_flg, ep_flg, cstl_flg);
+
+                    PUSH_STATE();
+                    make_move(move);
+
+                    is_legal = !(bitboards[turn ? ba : wa] 
+                                & bitboards[turn ? K : k]) ? 1 : 0;
+
+                    POP_STATE();
+
+                    if (is_legal) {
+                        // printf("adding \n");
+                        // idx_to_pos(GET_SRC(move));
+                        // idx_to_pos(GET_TRGT(move));
+                        // printf(":\n");
+                        // print_move(move);
+                        // printf("\n");
+                        move_list[move_count] = move;
+                        move_count++;
+                    }
+                    
                 }
 
                 // in the case of promotions, we'll need to add 4 moves
                 else {
                     for (promote = start + 1; promote < end; promote++){
-                        move_list[move_count] = ENCODE(source, target, piece, 
-                                            promote, cap_flg, dbl_flg, ep_flg,
-                                            cstl_flg);
-                        move_count++;
+                        move = ENCODE(source, target, piece, promote, cap_flg, 
+                        dbl_flg, ep_flg, cstl_flg);
+
+                        PUSH_STATE();
+                        make_move(move);
+
+                        is_legal = !(bitboards[turn ? ba : wa] 
+                                & bitboards[turn ? K : k]) ? 1 : 0;
+
+                        POP_STATE();
+
+                        if (is_legal){
+                            // printf("adding \n");
+                            // idx_to_pos(GET_SRC(move));
+                            // idx_to_pos(GET_TRGT(move));
+                            // printf(":\n");
+                            // print_move(move);
+                            // printf("\n");
+                            move_list[move_count] = move;
+                            move_count++;
+                        }
                     }
                 }
 
@@ -726,16 +770,202 @@ void gen_moves(){
 
     // generate castling moves, add them to the move_list
     uint8_t castle = get_castle(turn);
-    printf("castle: %s\n", castle == none ? "none" : (castle == kingside ? "kingside" : (castle == queenside ? "queenside" : "both")));
     if (castle == both || castle == kingside) {
-        move_list[move_count] = ENCODE(turn ? 60 : 4, turn ? 62 : 6, turn ? 6 : 0, none, 0, 
-                                0, 0, 1);
+        move_list[move_count] = ENCODE(turn ? 60 : 4, turn ? 62 : 6, 
+                                turn ? 6 : 0, none, 0, 0, 0, 1);
         move_count++;
     }
     if (castle == both || castle == queenside) {
-        move_list[move_count] = ENCODE(turn ? 60 : 4, turn ? 58 : 2, turn ? 6 : 0, none, 0, 
-                                0, 0, 1);
+        move_list[move_count] = ENCODE(turn ? 60 : 4, turn ? 58 : 2, 
+                                turn ? 6 : 0, none, 0, 0, 0, 1);
         move_count++;
     }
 
 }
+
+void make_move(uint32_t move) {
+
+    // necessary data about the move that's being made
+    uint8_t source = GET_SRC(move), target = GET_TRGT(move), 
+            type = GET_TYPE(move), pro_type = GET_PRO_TYPE(move),
+            cap_flg = GET_CAP_FLG(move), dbl_flg = GET_DBL_FLG(move),
+            ep_flg = GET_EP_FLG(move), cstl_flg = GET_CSTL_FLG(move),
+            all = turn ? allb : allw, opp = turn ? allw : allb;
+
+    uint64_t src_brd = (1ULL << source), trgt_brd = (1ULL << target);
+
+    // reset enpassant square. this will be set later in this function if a
+    // pawn double jump occured.
+    epsq = 64;
+
+    // take care of castle flags:
+
+    // if src or trgt is a rook, this side can no longer castle as the piece 
+    // either moved or was captured.
+    if (!source || !target) wqsc = 0;
+    if (source == 7 || target == 7) wksc = 0;
+    if (source == 56 || target == 56) bqsc = 0;
+    if (source == 63 || target == 63) bksc = 0;
+
+    // move piece from src to target (manipulate all and piece bitboards)
+    bitboards[all]  ^= src_brd;
+    bitboards[type] ^= src_brd;
+    bitboards[all]  ^= trgt_brd;
+    bitboards[type] ^= trgt_brd;
+
+    // take care of promotions
+    if (pro_type != none) {
+
+        bitboards[type] ^= trgt_brd;
+        bitboards[pro_type] ^= trgt_brd;
+
+    }
+
+    // take care of captures
+    if (cap_flg) {
+
+        uint8_t opp_type;
+
+        // get captured pieces type
+        if (turn) opp_type =  (bitboards[Q] & trgt_brd) ? Q :
+                         (bitboards[R] & trgt_brd) ? R :
+                         (bitboards[B] & trgt_brd) ? B :
+                         (bitboards[N] & trgt_brd) ? N : P;
+
+        else opp_type = (bitboards[q] & trgt_brd) ? q :
+                             (bitboards[r] & trgt_brd) ? r :
+                             (bitboards[b] & trgt_brd) ? b :
+                             (bitboards[n] & trgt_brd) ? n : p;
+
+        // remove enemy piece
+        bitboards[opp_type] ^= trgt_brd;
+        bitboards[opp] ^= trgt_brd;
+
+
+    }
+
+    // take care of en passant capture
+    if (ep_flg) {
+
+        uint64_t ep_brd;
+
+        // find the pawn that's en-passant'd
+        if (turn) ep_brd = trgt_brd << 8;
+        else ep_brd = trgt_brd >> 8;
+
+        // remove pawn from opp bitboards
+        bitboards[opp] ^= ep_brd;
+        bitboards[turn ? p : P] ^= ep_brd;
+
+    }
+
+    // set epsq if pawn did double jump
+    if (dbl_flg) {
+
+        if (turn) epsq = target + 8;
+        else epsq = target - 8;
+
+    }
+
+    // move rook if king castled
+    if (cstl_flg) {
+        
+        uint64_t mask;
+
+        if (target == 2) mask = wqsc_msk;
+        else if (target == 6) mask = wksc_msk;
+        else if (target == 58) mask = bqsc_msk;
+        else if (target == 62) mask = bksc_msk;
+
+        bitboards[turn ? r : R] ^= mask;
+        bitboards[all] ^= mask;
+
+    }
+
+    // we'll need to update our own attack squares as the piece that we moved
+    // will be attacking new squares.
+    gen_moves(0);
+
+    // last thing to do is switch turns, clear previous attacks, and generate
+    // new attacks. this will be for checking that our move does not put our
+    // king in check.
+    turn = !turn;
+    bitboards[turn ? ba : wa] = 0x0;
+    gen_moves(0);
+
+}
+
+void print_move(uint32_t move) {
+
+    printf("SRC: %d\nTGRT: %d\nTYPE: %d\nPRO_TYPE: %d\nCAP: %d\nDBL: %d\nEP: %d\nCSTL: %d\n", GET_SRC(move), GET_TRGT(move), GET_TYPE(move), GET_PRO_TYPE(move), GET_CAP_FLG(move) ? 1 : 0, GET_DBL_FLG(move) ? 1 : 0, GET_EP_FLG(move) ? 1 : 0, GET_CSTL_FLG(move) ? 1 : 0);
+
+}
+
+//
+//
+//
+uint64_t perft(uint8_t depth, uint8_t divide) {
+
+    // generate all moves for the current player, put in move list
+    gen_moves(1);
+
+    // if depth is 1, simply return the number of moves
+    if (depth == 1 && !divide) return move_count;
+    else if(depth == 0) return 1ULL;
+
+    uint64_t sum = 0, result, sum2 = 0;
+
+    // loop through each move, make it, call perft(depth - 1) on new position,
+    // unmake the move, repeat.
+    for (uint8_t i = 0; i < move_count; i++) {
+        
+        PUSH_STATE();
+
+        uint32_t move = move_list[i];
+        make_move(move);
+        result = perft(depth - 1, 0);
+
+        // for debugging moves
+        // if (i != 17) result = perft(depth - 1, 0); 
+        // else {
+        //     if (depth == 2) print_board(65);
+        //     result = perft(depth - 1, depth == 2 ? 1 : 0); 
+        //     if (depth == 2) printf("total moves (%d):\t%d\n", depth - 1, result);
+        // }
+
+        sum += result;
+
+        POP_STATE();
+
+        if (divide == 1){
+            uint8_t pro_type = GET_PRO_TYPE(move);
+            char type_char = '\0';
+
+            if (pro_type != none){
+               type_char = (!pro_type || pro_type == 6) ? 'k' : type_char;
+               type_char = (pro_type == 1 || pro_type == 7) ? 'q' : type_char;
+               type_char = (pro_type == 2 || pro_type == 8) ? 'r' : type_char;
+               type_char = (pro_type == 3 || pro_type == 9) ? 'b' : type_char;
+               type_char = (pro_type == 4 || pro_type == 10) ? 'n' : type_char;
+            }
+
+            // for printing % calculated - used for testing deep depths
+            //printf("[%.2lf] %s", (float) 100*(((float)(i+1)) / ((float)move_count)), (float) 100*(((float)(i+1)) / ((float)move_count)) < (float)10 ? "  " : " ");
+            
+            // for printing index of move - used for debugging
+            // printf("[%d] %s", i, i > 9 ? " " : "  ");
+
+            idx_to_pos(GET_SRC(move_list[i]));
+            idx_to_pos(GET_TRGT(move_list[i]));
+            printf("%c", type_char);
+            printf(": %d\n", result);
+        }
+
+    }
+
+    return sum;
+
+}
+
+// incorrect, expected, actual, perft(n)
+// 

@@ -8,27 +8,39 @@
 int main(){
 
 
-    parse_fen(test2);
-
-    print_board(65);
+    parse_fen(test1);
+    //print_board(65);
+    //printf("\n");
 
     turn = !turn;
-    gen_moves();
+    gen_moves(0);
     turn = !turn;
-    gen_moves();
-    
-    printf("\n");
-    for (int i = 0; i < move_count; i++){
 
-        printf("(%d): ", i);
-        idx_to_pos(GET_SRC(move_list[i]));
-        idx_to_pos(GET_TRGT(move_list[i]));
-        printf(" %d %d %d-%d-%d-%d\n", GET_TYPE(move_list[i]), GET_PRO_TYPE(move_list[i]), GET_CAP_FLG(move_list[i]) ? 1 : 0, GET_DBL_FLG(move_list[i]) ? 1 : 0, GET_EP_FLG(move_list[i]) ? 1 : 0, GET_CSTL_FLG(move_list[i]) ? 1 : 0);
-    
+    uint8_t depth = 3, divide = 1;
+
+    for (uint8_t i = depth; i <= depth; i++) {
+
+        uint64_t total = perft(i, divide);
+        divide = 0;
+        printf("total moves (%d):\t%d\n", i, total);
+
     }
-
-    printf("move count: %d\n", move_count);
 
     return 0;
 
 }
+
+// startpos:
+// off by 0 at depth 6
+
+// test 1:
+// off by ~4,000 at depth 3
+
+// test 2:
+// off ~34 at depth 6
+
+// test 3:
+// off ~250 at depth 3
+
+// test 4:
+// off ~200 at depth 3
