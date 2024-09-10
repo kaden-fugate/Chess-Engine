@@ -8,7 +8,7 @@
 int main(){
 
 
-    parse_fen(test1);
+    parse_fen(test4);
     //print_board(65);
     //printf("\n");
 
@@ -16,12 +16,11 @@ int main(){
     gen_moves(0);
     turn = !turn;
 
-    uint8_t depth = 3, divide = 1;
+    uint8_t depth = 5, divide = 0;
 
-    for (uint8_t i = depth; i <= depth; i++) {
+    for (uint8_t i = 1; i <= depth; i++) {
 
-        uint64_t total = perft(i, divide);
-        divide = 0;
+        uint64_t total = perft(i, i == depth);
         printf("total moves (%d):\t%d\n", i, total);
 
     }
@@ -34,13 +33,13 @@ int main(){
 // off by 0 at depth 6
 
 // test 1:
-// off by ~4,000 at depth 3
+// off by 0 at depth 5
 
 // test 2:
-// off ~34 at depth 6
+// off 0 at depth 7
 
 // test 3:
-// off ~250 at depth 3
+// off 0 at depth 6
 
 // test 4:
-// off ~200 at depth 3
+// off 0 at depth 5

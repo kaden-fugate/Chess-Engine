@@ -482,8 +482,10 @@ uint64_t q_valid_moves(uint8_t pos, uint64_t friendly, uint64_t opp){
 uint8_t get_castle(uint8_t color) {
 
     // set masks for color (castling, attack, all pieces)
-    uint64_t ks_msk = color ? bks_msk : wks_msk, 
-    qs_msk = color ? bqs_msk : wqs_msk, 
+    uint64_t p_ks_msk = color ? p_bks_msk : p_wks_msk, 
+    p_qs_msk = color ? p_bqs_msk : p_wqs_msk,
+    a_qs_msk = color ? a_bqs_msk : a_wqs_msk, 
+    a_ks_msk = color ? a_bks_msk : a_wks_msk, 
     attack = color ? bitboards[wa] : bitboards[ba],
     all = bitboards[allw] | bitboards[allb],
     king = color ? bitboards[k] : bitboards[K];
@@ -494,8 +496,8 @@ uint8_t get_castle(uint8_t color) {
     uint8_t ks_r = color ? bksc : wksc, qs_r = color ? bqsc : wqsc, ksc, qsc;
              
     // check that castling is not impeded
-    ksc = (ks_r && !(ks_msk & (all | attack))) ? 1 : 0;
-    qsc = (qs_r && !(qs_msk & (all | attack))) ? 1 : 0;
+    ksc = (ks_r && !(p_ks_msk & all) && !(a_ks_msk & attack)) ? 1 : 0;
+    qsc = (qs_r && !(p_qs_msk & all) && !(a_qs_msk & attack)) ? 1 : 0;
 
     // return which sides can castle
     return (ksc && qsc) ? both : (ksc ? kingside : (qsc ? queenside : none));
@@ -684,6 +686,7 @@ void gen_moves(uint8_t legal){
             // add all generated moves to the list
             while (moves) {
 
+
                 prm_flg = 0, cap_flg = 0, dbl_flg = 0, ep_flg = cstl_flg = 0;
                 
                 // get the target pos of the move and remove it from the
@@ -721,12 +724,6 @@ void gen_moves(uint8_t legal){
                     POP_STATE();
 
                     if (is_legal) {
-                        // printf("adding \n");
-                        // idx_to_pos(GET_SRC(move));
-                        // idx_to_pos(GET_TRGT(move));
-                        // printf(":\n");
-                        // print_move(move);
-                        // printf("\n");
                         move_list[move_count] = move;
                         move_count++;
                     }
@@ -748,12 +745,6 @@ void gen_moves(uint8_t legal){
                         POP_STATE();
 
                         if (is_legal){
-                            // printf("adding \n");
-                            // idx_to_pos(GET_SRC(move));
-                            // idx_to_pos(GET_TRGT(move));
-                            // printf(":\n");
-                            // print_move(move);
-                            // printf("\n");
                             move_list[move_count] = move;
                             move_count++;
                         }
@@ -768,16 +759,18 @@ void gen_moves(uint8_t legal){
 
     }
 
+    if (!legal) return;
+
     // generate castling moves, add them to the move_list
     uint8_t castle = get_castle(turn);
     if (castle == both || castle == kingside) {
-        move_list[move_count] = ENCODE(turn ? 60 : 4, turn ? 62 : 6, 
-                                turn ? 6 : 0, none, 0, 0, 0, 1);
+        move_list[move_count] = ENCODE((turn ? 60 : 4), (turn ? 62 : 6), 
+                                (turn ? 6 : 0), none, 0, 0, 0, 1);
         move_count++;
     }
     if (castle == both || castle == queenside) {
-        move_list[move_count] = ENCODE(turn ? 60 : 4, turn ? 58 : 2, 
-                                turn ? 6 : 0, none, 0, 0, 0, 1);
+        move_list[move_count] = ENCODE((turn ? 60 : 4), (turn ? 58 : 2), 
+                                (turn ? 6 : 0), none, 0, 0, 0, 1);
         move_count++;
     }
 
@@ -802,10 +795,10 @@ void make_move(uint32_t move) {
 
     // if src or trgt is a rook, this side can no longer castle as the piece 
     // either moved or was captured.
-    if (!source || !target) wqsc = 0;
-    if (source == 7 || target == 7) wksc = 0;
-    if (source == 56 || target == 56) bqsc = 0;
-    if (source == 63 || target == 63) bksc = 0;
+    if (!source || !target || type == K) wqsc = 0;
+    if (source == 7 || target == 7 || type == K) wksc = 0;
+    if (source == 56 || target == 56 || type == k) bqsc = 0;
+    if (source == 63 || target == 63 || type == k) bksc = 0;
 
     // move piece from src to target (manipulate all and piece bitboards)
     bitboards[all]  ^= src_brd;
@@ -855,7 +848,7 @@ void make_move(uint32_t move) {
 
         // remove pawn from opp bitboards
         bitboards[opp] ^= ep_brd;
-        bitboards[turn ? p : P] ^= ep_brd;
+        bitboards[turn ? P : p] ^= ep_brd;
 
     }
 
@@ -926,11 +919,11 @@ uint64_t perft(uint8_t depth, uint8_t divide) {
         result = perft(depth - 1, 0);
 
         // for debugging moves
-        // if (i != 17) result = perft(depth - 1, 0); 
+        // if (i != 14) result = perft(depth - 1, 0); 
         // else {
-        //     if (depth == 2) print_board(65);
-        //     result = perft(depth - 1, depth == 2 ? 1 : 0); 
-        //     if (depth == 2) printf("total moves (%d):\t%d\n", depth - 1, result);
+        //     if (depth == 3) print_board(65);
+        //     result = perft(depth - 1, depth == 3 ? 1 : 0); 
+        //     if (depth == 3) printf("total moves (%d):\t%d\n", depth - 1, result);
         // }
 
         sum += result;
@@ -950,10 +943,10 @@ uint64_t perft(uint8_t depth, uint8_t divide) {
             }
 
             // for printing % calculated - used for testing deep depths
-            //printf("[%.2lf] %s", (float) 100*(((float)(i+1)) / ((float)move_count)), (float) 100*(((float)(i+1)) / ((float)move_count)) < (float)10 ? "  " : " ");
+            printf("[%.2lf] %s", (float) 100*(((float)(i+1)) / ((float)move_count)), (float) 100*(((float)(i+1)) / ((float)move_count)) < (float)10 ? "  " : " ");
             
             // for printing index of move - used for debugging
-            // printf("[%d] %s", i, i > 9 ? " " : "  ");
+            //printf("[%d] %s", i, i > 9 ? " " : "  ");
 
             idx_to_pos(GET_SRC(move_list[i]));
             idx_to_pos(GET_TRGT(move_list[i]));
@@ -969,3 +962,6 @@ uint64_t perft(uint8_t depth, uint8_t divide) {
 
 // incorrect, expected, actual, perft(n)
 // 
+
+// castling masks for checking that castle is not impeded need to be different.
+// attack impedement needs a mask, piece impedement needs a different mask.
