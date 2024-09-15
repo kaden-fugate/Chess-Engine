@@ -1,8 +1,6 @@
 #ifndef MASKS_H
 #define MASKS_H
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 
 // hexadecimal representations of the below boards:

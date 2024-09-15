@@ -40,8 +40,6 @@
 #define queenside 2
 #define both 3
 
-
-
 extern uint32_t move_list[256];
 extern uint8_t move_count;
 extern uint8_t turn;

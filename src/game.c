@@ -3,197 +3,11 @@
 #include "magic.h"
 
 //
-// basic function that will print the current state of the board
-//
-void print_board(uint8_t pos){
-
-    printf("    |-------|-------|-------|-------|-------|-------|-------|-------|\n");
-
-    for (int i = 7; i >= 0; i--){
-
-        printf("    |       |       |       |       |       |       |       |       |\n%d   |", i + 1);
-        
-        for (int j = 0; j < 8; j++){
-            
-            // debug for printing result of move generation
-            if (pos < 64 & (1ULL << pos) & (1ULL << ((i * 8) + j)))
-                printf("   ^   |");
-            
-            // print black pieces
-            else if (bitboards[k] & (1ULL << ((i * 8) + j))) {
-                printf("   k   |", i, j);
-            }
-            else if (bitboards[q] & (1ULL << ((i * 8) + j))) {
-                printf("   q   |", i, j);
-            }
-            else if (bitboards[r] & (1ULL << ((i * 8) + j))) {
-                printf("   r   |", i, j);
-            }
-            else if (bitboards[b] & (1ULL << ((i * 8) + j))) {
-                printf("   b   |", i, j);
-            }
-            else if (bitboards[n] & (1ULL << ((i * 8) + j))) {
-                printf("   n   |", i, j);
-            }
-            else if (bitboards[p] & (1ULL << ((i * 8) + j))) {
-                printf("   p   |", i, j);
-            }
-            
-            // print white pieces
-            else if (bitboards[K] & (1ULL << ((i * 8) + j))) {
-                printf("   K   |", i, j);
-            }
-            else if (bitboards[Q] & (1ULL << ((i * 8) + j))) {
-                printf("   Q   |", i, j);
-            }
-            else if (bitboards[R] & (1ULL << ((i * 8) + j))) {
-                printf("   R   |", i, j);
-            }
-            else if (bitboards[B] & (1ULL << ((i * 8) + j))) {
-                printf("   B   |", i, j);
-            }
-            else if (bitboards[N] & (1ULL << ((i * 8) + j))) {
-                printf("   N   |", i, j);
-            }
-            else if (bitboards[P] & (1ULL << ((i * 8) + j))) {
-                printf("   P   |", i, j);
-            }
-
-            // print unoccupied space
-            else { printf("       |"); }
-
-        }
-
-        printf("\n    |       |       |       |       |       |       |       |       |\n");
-        printf("    |-------|-------|-------|-------|-------|-------|-------|-------|\n");
-
-    }
-    printf("\n        A       B       C       D       E       F       G       H       \n");
-
-}
-
-// 
-// this function just prints a given bitboard. just makes debugging easier
-//
-void print_bitboard(uint64_t board){
-
-    for (int8_t i = 7; i >= 0; i--){
-
-        for (int8_t j = 0; j < 8; j++){
-
-            printf("   %d   ", (board & (1ULL << (i * 8 + j))) ? 1 : 0);
-
-        }
-
-        printf("\n\n");
-
-    }
-
-    printf("\n");
-
-}
-
-//
-// this function will parse a string in FEN format. FEN will be passed into
-// function as a char *. will fill in all relevant information such as piece
-// positions, current turn, castling rights, and en passant squares.
-// 
-void parse_fen(char *fen){
-
-    uint8_t i, field = 0, cur = 56;
-    uint64_t pos_bit;
-
-    for (i = 0; fen[i] != '\0'; i++) {
-
-        // moving to next field in fen
-        if (fen[i] == ' ') field++;
-
-        // first field (position parsing)
-        else if (field == 0) {
-
-            // check if char is an integer. if so, shift cur square ahead by
-            // n squares.
-            if ( (int) fen[i] >= 48 && (int) fen[i] <= 57) 
-                cur += (((int) fen[i]) - 48);
-
-            // check if char is '/' 
-            else if (fen[i] == '/') cur -= 16;
-
-            // char is a piece indicator
-            else {
-
-                pos_bit = (1ULL << cur);
-
-                if (fen[i] == 'k') bitboards[k] |= pos_bit;
-                else if (fen[i] == 'q') bitboards[q] |= pos_bit;
-                else if (fen[i] == 'r') bitboards[r] |= pos_bit;
-                else if (fen[i] == 'b') bitboards[b] |= pos_bit;
-                else if (fen[i] == 'n') bitboards[n] |= pos_bit;
-                else if (fen[i] == 'p') bitboards[p] |= pos_bit;
-
-                else if (fen[i] == 'K') bitboards[K] |= pos_bit;
-                else if (fen[i] == 'Q') bitboards[Q] |= pos_bit;
-                else if (fen[i] == 'R') bitboards[R] |= pos_bit;
-                else if (fen[i] == 'B') bitboards[B] |= pos_bit;
-                else if (fen[i] == 'N') bitboards[N] |= pos_bit;
-                else if (fen[i] == 'P') bitboards[P] |= pos_bit;
-
-                // check piece color
-                if ( (int) fen[i] >= 65 && (int) fen[i] <= 90 ) 
-                    bitboards[allw] |= pos_bit;
-
-                else bitboards[allb] |= pos_bit;
-
-                cur++;
-
-            }
-
-        } 
-        
-        // second field (player turn)
-        else if (field == 1) {
-
-            if (fen[i] == 'w') turn = 0;
-            else turn = 1;
-
-        }
-
-        // third field (castling rights)
-        else if (field == 2) {
-
-            if (fen[i] == 'K') wksc = 1;
-            else if (fen[i] == 'Q') wqsc = 1;
-            else if (fen[i] == 'k') bksc = 1;
-            else if (fen[i] == 'q') bqsc = 1;
-
-        }
-
-        // fourth field (enpassant square)
-        else if (field == 3) {
-            
-            // no enpassant
-            if (fen[i] == '-') epsq = 64;
-            
-            else {
-
-                epsq = (((int) fen[i] - 97)) + (8 * ((int) fen[i + 1] - 49));
-                i++;
-
-            }
-
-        }
-
-    }
-
-}
-
-//
 // function will take the position of the knight as well as a bitboard
 // representing the location of all pieces of the knights color. function will
 // return a bitboard representing all pseudo-valid moves for the given knight.
 //
 // 8 possible moves:
-//                                     63rd bit
 // |----|----|----|----|----|----|----|----|
 // |    |    |    |    |    |    |    |    |
 // |----|----|----|----|----|----|----|----|
@@ -547,28 +361,7 @@ uint64_t k_valid_moves(uint8_t pos, uint64_t friendly){
 
 }
 
-//
-// get least significant bit flipped in a given board.
-//
-uint8_t lsb(uint64_t board) {
 
-    if (!board) return 64;
-    for (uint8_t i = 0; i < 64; i++) if (board & (1ULL << i)) return i;
-
-}
-
-//
-//
-//
-void idx_to_pos(uint8_t idx) {
-
-    uint8_t file, rank;
-    char *fl_arr = "abcdefgh", *rk_arr = "123456789";
-
-    file = idx % 8, rank = idx / 8;
-    printf("%c%c", fl_arr[file], rk_arr[rank]);
-
-}
 
 
 
@@ -888,80 +681,46 @@ void make_move(uint32_t move) {
 
 }
 
-void print_move(uint32_t move) {
+//
+//
+//
+uint8_t checkmate() {
 
-    printf("SRC: %d\nTGRT: %d\nTYPE: %d\nPRO_TYPE: %d\nCAP: %d\nDBL: %d\nEP: %d\nCSTL: %d\n", GET_SRC(move), GET_TRGT(move), GET_TYPE(move), GET_PRO_TYPE(move), GET_CAP_FLG(move) ? 1 : 0, GET_DBL_FLG(move) ? 1 : 0, GET_EP_FLG(move) ? 1 : 0, GET_CSTL_FLG(move) ? 1 : 0);
+    if (move_count) return 0;
+
+    uint64_t king = turn ? bitboards[k] : bitboards[K],
+             attack = turn ? bitboards[wa] : bitboards[ba];
+
+    if (king & attack) return 1;
+    return 0;
 
 }
 
 //
 //
 //
-uint64_t perft(uint8_t depth, uint8_t divide) {
+uint8_t stalemate() {
 
-    // generate all moves for the current player, put in move list
-    gen_moves(1);
+    if (move_count) return 0;
 
-    // if depth is 1, simply return the number of moves
-    if (depth == 1 && !divide) return move_count;
-    else if(depth == 0) return 1ULL;
+    uint64_t king = turn ? bitboards[k] : bitboards[K],
+             attack = turn ? bitboards[wa] : bitboards[ba];
 
-    uint64_t sum = 0, result, sum2 = 0;
+    if (king & attack) return 0;
+    return 1;
 
-    // loop through each move, make it, call perft(depth - 1) on new position,
-    // unmake the move, repeat.
-    for (uint8_t i = 0; i < move_count; i++) {
-        
-        PUSH_STATE();
+}
 
-        uint32_t move = move_list[i];
-        make_move(move);
-        result = perft(depth - 1, 0);
+void player_move(char *move) {
 
-        // for debugging moves
-        // if (i != 14) result = perft(depth - 1, 0); 
-        // else {
-        //     if (depth == 3) print_board(65);
-        //     result = perft(depth - 1, depth == 3 ? 1 : 0); 
-        //     if (depth == 3) printf("total moves (%d):\t%d\n", depth - 1, result);
-        // }
-
-        sum += result;
-
-        POP_STATE();
-
-        if (divide == 1){
-            uint8_t pro_type = GET_PRO_TYPE(move);
-            char type_char = '\0';
-
-            if (pro_type != none){
-               type_char = (!pro_type || pro_type == 6) ? 'k' : type_char;
-               type_char = (pro_type == 1 || pro_type == 7) ? 'q' : type_char;
-               type_char = (pro_type == 2 || pro_type == 8) ? 'r' : type_char;
-               type_char = (pro_type == 3 || pro_type == 9) ? 'b' : type_char;
-               type_char = (pro_type == 4 || pro_type == 10) ? 'n' : type_char;
-            }
-
-            // for printing % calculated - used for testing deep depths
-            printf("[%.2lf] %s", (float) 100*(((float)(i+1)) / ((float)move_count)), (float) 100*(((float)(i+1)) / ((float)move_count)) < (float)10 ? "  " : " ");
+    uint8_t from = (((int) move[0]) - 97) + ((int) move[1] - 49) * 8,
+            to = (((int) move[2]) - 97) + ((int) move[3] - 49) * 8;
             
-            // for printing index of move - used for debugging
-            //printf("[%d] %s", i, i > 9 ? " " : "  ");
+    for (int8_t i = 0; i < move_count; i++) {
 
-            idx_to_pos(GET_SRC(move_list[i]));
-            idx_to_pos(GET_TRGT(move_list[i]));
-            printf("%c", type_char);
-            printf(": %d\n", result);
-        }
+        if (from == GET_SRC(move_list[i]) && to == GET_TRGT(move_list[i]))
+            make_move(move_list[i]);
 
     }
 
-    return sum;
-
 }
-
-// incorrect, expected, actual, perft(n)
-// 
-
-// castling masks for checking that castle is not impeded need to be different.
-// attack impedement needs a mask, piece impedement needs a different mask.

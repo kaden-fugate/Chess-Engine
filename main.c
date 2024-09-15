@@ -1,5 +1,7 @@
 #include "src/masks.h"
 #include "src/game.h"
+#include "src/functions.h"
+#include "src/engine.h"
 
 #include "positions/basic.h"
 #include "positions/fen.h"
@@ -7,39 +9,39 @@
 
 int main(){
 
+    init(startpos);
+    gen_moves(1);
 
-    parse_fen(test4);
-    //print_board(65);
-    //printf("\n");
+    char move[100];
+    uint8_t best_move = 255;
 
-    turn = !turn;
-    gen_moves(0);
-    turn = !turn;
+    while (!checkmate() && !stalemate()) {
 
-    uint8_t depth = 5, divide = 0;
+        print_board(65);
 
-    for (uint8_t i = 1; i <= depth; i++) {
+        if (turn){
+            
+            printf("(%s TURN):\nscore: %.2lf, ", turn ? "BLACK'S" : "WHITE'S", (float) alpha_beta_min(-CHECKMATE, CHECKMATE,  4, &best_move) / 100.0);
+            printf("best move: ");
+            idx_to_pos(GET_SRC(move_list[best_move]));
+            idx_to_pos(GET_TRGT(move_list[best_move]));
+            printf(" (%d)\n", best_move);
 
-        uint64_t total = perft(i, i == depth);
-        printf("total moves (%d):\t%d\n", i, total);
+            make_move(move_list[best_move]);
+        }
+        else{
 
+            printf("enter move: ");
+            scanf("%s", move);
+            player_move(move);
+            
+        }
+        gen_moves(1);
     }
 
+    printf("%s wins!\n", turn ? "Black" : "White");
+
+    
     return 0;
 
 }
-
-// startpos:
-// off by 0 at depth 6
-
-// test 1:
-// off by 0 at depth 5
-
-// test 2:
-// off 0 at depth 7
-
-// test 3:
-// off 0 at depth 6
-
-// test 4:
-// off 0 at depth 5
